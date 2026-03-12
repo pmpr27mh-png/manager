@@ -17,21 +17,33 @@
         h2 { font-size: 1.1em; margin: 0 0 12px 0; border-left: 4px solid var(--accent); padding-left: 10px; }
 
         /* カレンダー表示領域の安定化 */
-        #calendar-container { width: 100%; min-height: 500px; height: 70vh; margin-bottom: 10px; }
-        #calendar { height: 100% !important; background: white; }
+        #calendar-container { 
+            width: 100%; 
+            min-height: 500px; 
+            height: 75vh; 
+            margin-bottom: 10px; 
+            overflow-x: auto; /* 左右スクロールを許可 */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 週表示の時に横幅を広げる設定 */
+        #calendar { 
+            min-width: 100%; /* 基本は100% */
+            height: 100% !important; 
+            background: white; 
+        }
+
+        /* スマホかつ週・日表示の時は横幅を強制的に広げる */
+        @media (max-width: 768px) {
+            .fc-view-timeGridWeek, .fc-view-timeGridDay {
+                min-width: 800px; /* ここでスクロールの長さを決める */
+            }
+        }
 
         /* FullCalendarのツールバー崩れ防止 */
         .fc .fc-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; }
-        .fc .fc-toolbar-title { font-size: 1.1em !important; order: 1; min-width: 100%; text-align: center; margin-bottom: 5px; }
-        .fc .fc-toolbar-chunk { display: flex; gap: 2px; }
-        
-        @media (min-width: 600px) {
-            .fc .fc-toolbar-title { order: 2; min-width: auto; margin-bottom: 0; }
-            .fc .fc-toolbar-chunk:nth-child(1) { order: 1; }
-            .fc .fc-toolbar-chunk:nth-child(3) { order: 3; }
-        }
-
-        .fc .fc-button { padding: 4px 8px !important; font-size: 0.8em !important; }
+        .fc .fc-toolbar-title { font-size: 1em !important; order: 1; min-width: 100%; text-align: center; margin-bottom: 5px; }
+        .fc .fc-button { padding: 4px 6px !important; font-size: 0.75em !important; }
 
         /* 入力エリアの調整 */
         .input-box { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -105,14 +117,15 @@
 
 <script>
     let calendar;
-    const KEY_T = 'life_biz_v12_tasks';
-    const KEY_M = 'life_biz_v12_money';
+    const KEY_T = 'life_biz_v13_tasks';
+    const KEY_M = 'life_biz_v13_money';
 
     document.addEventListener('DOMContentLoaded', function() {
         calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
             initialView: 'dayGridMonth',
             locale: 'ja',
             height: '100%',
+            stickyHeaderDates: true, // 日付ヘッダーを固定
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
