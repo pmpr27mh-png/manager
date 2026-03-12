@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizManage Pro</title>
+    
+    <link rel="manifest" id="my-manifest">
+    <meta name="theme-color" content="#2c3e50">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2666/2666505.png">
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+    
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --gold: #f39c12; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 10px; }
+        .wrapper { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 15px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 15px; }
+        h2 { color: var(--primary); margin: 0 0 15px 0; border-left: 5px solid var(--accent); padding-left: 10px; font-size: 1.2em; }
+        
+        #calendar { height: 500px; background: white; font-size: 0.9em; }
+        
+        .input-box { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        input, select, button { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: bold; }
+
+        .total-assets-card { background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 10px; }
+        .total-assets-amount { font-size: 1.5em; font-weight: bold; color: var(--gold); }
+        
+        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+        .report-item { padding: 8px; border-radius: 8px; text-align: center; font-size: 0.8em; }
+        .inc-box { background: #e8f5e9; color: var(--success); }
+        .exp-box { background: #ffebee; color: var(--danger); }
+        
+        .history-container { max-height: 180px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 8px; }
+        .history-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f9f9f9; font-size: 0.8em; }
+
+        @media (max-width: 1000px) { .wrapper { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="card">
+        <h2>Schedule</h2>
+        <div id="calendar"></div>
+        <div class="input-box">
+            <div class="flex-row">
+                <input type="text" id="t-title" placeholder="予定名" style="flex:1;">
+                <select id="t-priority"><option value="high">高</option><option value="mid" selected>中</option><option value="low">低</option></select>
+            </div>
+            <div class="flex-row">
+                <input type="date" id="t-date">
+                <input type="time" id="t-time" value="09:00">
+                <button id="btn-add-task" style="flex:1;">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="total-assets-card">
+            <div>累計残高</div>
+            <div class="total-assets-amount">¥ <span id="grand-total">0</span></div>
+        </div>
+
+        <div class="card">
+            <h2>Money</h2>
+            <select id="month-filter" style="width:100%; margin-bottom:10px;" onchange="refreshMoneyUI()"></select>
+            <div class="report-grid">
+                <div class="report-item inc-box">収入<br><span id="sum-inc">¥0</span></div>
+                <div class="report-item exp-box">支出<br><span id="sum-exp">¥0</span></div>
+            </div>
+            <div class="input-box">
+                <input type="text" id="m-title" placeholder="内容">
+                <input type="number" id="m-amount" placeholder="金額">
+                <input type="date" id="m-date">
+                <button id="btn-add-money" style="background:var(--success);">記録</button>
+            </div>
+            <div class="history-container" id="m-history"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // PWA用のマニフェストを動的に生成
+    const manifest = {
+        "name": "BizManage Pro",
+        "short_name": "BizManage",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#f4f7f6",
+        "theme_color": "#2c3e50",
+        "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2666/2666505.png", "sizes": "512x512", "type": "image/png" }]
+    };
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    document.getElementById('my-manifest').setAttribute('href', URL.createObjectURL(blob));
+
+    // Service Workerの登録（アプリ化に必須）
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('data:text/javascript;base64,' + btoa('self.addEventListener("fetch", (e) => {});'));
+    }
+
+    // --- 以下、既存のロジック ---
+    let calendar;
+    const KEY_T = 'biz_tasks_v7';
+    const KEY_M = 'biz_money_v7';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'dayGridMonth',
+            locale: 'ja',
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+            events: JSON.parse(localStorage.getItem(KEY_T) || '[]'),
+            eventClick: (info) => {
+                if (confirm(`削除しますか？`)) {
+                    info.event.remove();
+                    let data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
+                    data = data.filter(item => !(item.title === info.event.title && item.start === info.event.startStr));
+                    localStorage.setItem(KEY_T, JSON.stringify(data));
+                }
+            }
+        });
+        calendar.render();
+
+        document.getElementById('btn-add-task').onclick = () => {
+            const title = document.getElementById('t-title').value;
+            const date = document.getElementById('t-date').value;
+            const time = document.getElementById('t-time').value;
+            if(!title || !date) return alert("入力不足");
+            const color = document.getElementById('t-priority').value === 'high' ? '#e74c3c' : '#3498db';
+            const newEv = { title, start: `${date}T${time}:00`, backgroundColor: color, borderColor: 'transparent' };
+            calendar.addEvent(newEv);
+            const data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
+            data.push(newEv);
+            localStorage.setItem(KEY_T, JSON.stringify(data));
+        };
+
+        initMonthSelect();
+        document.getElementById('m-date').valueAsDate = new Date();
+        refreshMoneyUI();
+
+        document.getElementById('btn-add-money').onclick = () => {
+            const title = document.getElementById('m-title').value;
+            const amount = parseInt(document.getElementById('m-amount').value);
+            const date = document.getElementById('m-date').value;
+            if(!title || isNaN(amount) || !date) return alert("正しく入力してください");
+            const dObj = new Date(date);
+            const data = JSON.parse(localStorage.getItem(KEY_M) || '[]');
+            data.push({ title, amount, date, monthKey: `${dObj.getFullYear()}-${dObj.getMonth() + 1}` });
+            localStorage.setItem(KEY_M, JSON.stringify(data));
+            refreshMoneyUI();
+        };
+    });
+
+    function initMonthSelect() {
+        const sel = document.getElementById('month-filter');
+        const now = new Date();
+        for (let i = -12; i <= 3; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+            const val = `${d.getFullYear()}-${d.getMonth() + 1}`;
+            const opt = new Option(`${d.getFullYear()}年 ${d.getMonth() + 1}月`, val);
+            if (i === 0) opt.selected = true;
+            sel.add(opt);
+        }
+    }
+
+    function refreshMoneyUI() {
+        const history = JSON.parse(localStorage.getItem(KEY_M) || '[]');
+        const targetMonth = document.getElementById('month-filter').value;
+        const histEl = document.getElementById('m-history');
+        let mInc = 0, mExp = 0, grandTotal = 0;
+        histEl.innerHTML = '';
+        history.forEach(item => {
+            grandTotal += item.amount;
+            if (item.monthKey === targetMonth) {
+                if (item.amount > 0) mInc += item.amount; else mExp += Math.abs(item.amount);
+                const row = document.createElement('div');
+                row.className = 'history-row';
+                row.innerHTML = `<span>${item.title}</span><span style="color:${item.amount >= 0 ? 'var(--success)':'var(--danger)'}">${item.amount.toLocaleString()}円</span>`;
+                histEl.prepend(row);
+            }
+        });
+        document.getElementById('grand-total').innerText = grandTotal.toLocaleString();
+        document.getElementById('sum-inc').innerText = `¥${mInc.toLocaleString()}`;
+        document.getElementById('sum-exp').innerText = `¥${mExp.toLocaleString()}`;
+    }
+</script>
+
+</body>
+</html>
