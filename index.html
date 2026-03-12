@@ -9,34 +9,46 @@
     
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --gold: #f39c12; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f7f6; margin: 0; padding: 10px; color: var(--primary); }
+        body { font-family: -apple-system, sans-serif; background-color: #f4f7f6; margin: 0; padding: 10px; color: var(--primary); overflow-x: hidden; }
         .wrapper { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
         @media (min-width: 1000px) { .wrapper { display: grid; grid-template-columns: 1fr 400px; } }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; }
         h2 { font-size: 1.1em; margin: 0 0 12px 0; border-left: 4px solid var(--accent); padding-left: 10px; }
-        #calendar-container { min-height: 450px; height: 65vh; margin-bottom: 10px; }
-        #calendar { height: 100% !important; }
+
+        /* カレンダー表示領域の安定化 */
+        #calendar-container { width: 100%; min-height: 500px; height: 70vh; margin-bottom: 10px; }
+        #calendar { height: 100% !important; background: white; }
+
+        /* FullCalendarのツールバー崩れ防止 */
+        .fc .fc-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; }
+        .fc .fc-toolbar-title { font-size: 1.1em !important; order: 1; min-width: 100%; text-align: center; margin-bottom: 5px; }
+        .fc .fc-toolbar-chunk { display: flex; gap: 2px; }
+        
+        @media (min-width: 600px) {
+            .fc .fc-toolbar-title { order: 2; min-width: auto; margin-bottom: 0; }
+            .fc .fc-toolbar-chunk:nth-child(1) { order: 1; }
+            .fc .fc-toolbar-chunk:nth-child(3) { order: 3; }
+        }
+
+        .fc .fc-button { padding: 4px 8px !important; font-size: 0.8em !important; }
+
+        /* 入力エリアの調整 */
         .input-box { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
         .flex-row { display: flex; gap: 5px; flex-wrap: wrap; }
-        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; flex: 1; min-width: 110px; }
+        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; flex: 1; min-width: 45%; }
         button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
+        
+        /* 資産・家計簿 */
         .total-assets-card { background: var(--primary); color: white; padding: 18px; border-radius: 12px; text-align: center; }
-        .total-assets-amount { font-size: 1.7em; font-weight: bold; color: var(--gold); margin: 5px 0; }
+        .total-assets-amount { font-size: 1.7em; font-weight: bold; color: var(--gold); }
         .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
         .report-item { padding: 10px; border-radius: 8px; text-align: center; font-size: 0.85em; }
         .inc-box { background: #e8f5e9; color: var(--success); }
         .exp-box { background: #ffebee; color: var(--danger); }
-        
-        /* 履歴の削除ボタン用スタイル */
-        .history-container { max-height: 250px; overflow-y: auto; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 5px; }
+        .history-container { max-height: 200px; overflow-y: auto; font-size: 0.85em; border-top: 1px solid #eee; margin-top: 5px; }
         .history-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
-        .history-info { display: flex; flex-direction: column; flex: 1; }
-        .history-date { font-size: 0.7em; color: #999; }
-        .del-btn { 
-            background: #eee; color: #999; border-radius: 40px; width: 24px; height: 24px; 
-            padding: 0; min-width: 24px; font-size: 12px; margin-left: 10px; flex: none;
-        }
-        .del-btn:hover { background: var(--danger); color: white; }
+        .del-btn { background: #eee; color: #999; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; padding: 0; font-size: 14px; margin-left: 10px; }
 
         .data-tools { margin-top: 10px; display: flex; justify-content: center; gap: 8px; }
         .data-tools button { background: rgba(255,255,255,0.15); font-size: 0.7em; padding: 6px 12px; min-width: auto; }
@@ -50,7 +62,7 @@
             <div style="font-size: 0.85em; opacity: 0.9;">Total Balance</div>
             <div class="total-assets-amount">¥ <span id="grand-total">0</span></div>
             <div class="data-tools">
-                <button onclick="exportData()">バックアップ</button>
+                <button onclick="exportData()">保存</button>
                 <button onclick="importData()">復元</button>
             </div>
         </div>
@@ -58,7 +70,9 @@
 
     <div class="card">
         <h2>Schedule</h2>
-        <div id="calendar-container"><div id="calendar"></div></div>
+        <div id="calendar-container">
+            <div id="calendar"></div>
+        </div>
         <div class="input-box">
             <div class="flex-row">
                 <input type="text" id="t-title" placeholder="予定名">
@@ -81,7 +95,7 @@
         </div>
         <div class="input-box">
             <input type="text" id="m-title" placeholder="内容">
-            <input type="number" id="m-amount" placeholder="金額（支出はマイナス）">
+            <input type="number" id="m-amount" placeholder="金額">
             <input type="date" id="m-date">
             <button id="btn-add-money" style="background:var(--success);">収支記録</button>
         </div>
@@ -91,15 +105,19 @@
 
 <script>
     let calendar;
-    const KEY_T = 'life_biz_v11_tasks';
-    const KEY_M = 'life_biz_v11_money';
+    const KEY_T = 'life_biz_v12_tasks';
+    const KEY_M = 'life_biz_v12_money';
 
     document.addEventListener('DOMContentLoaded', function() {
         calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
             initialView: 'dayGridMonth',
             locale: 'ja',
             height: '100%',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listMonth'
+            },
             buttonText: { month: '月', week: '週', list: '予定' },
             events: JSON.parse(localStorage.getItem(KEY_T) || '[]'),
             eventClick: (info) => {
@@ -135,9 +153,8 @@
             const title = document.getElementById('m-title').value;
             const amount = parseInt(document.getElementById('m-amount').value);
             const date = document.getElementById('m-date').value;
-            if(!title || isNaN(amount) || !date) return alert("正しく入力してください");
+            if(!title || isNaN(amount) || !date) return alert("入力エラー");
             const data = JSON.parse(localStorage.getItem(KEY_M) || '[]');
-            // 一意のID（タイムスタンプ）を付与して削除しやすくする
             data.push({ id: Date.now(), title, amount, date, monthKey: `${new Date(date).getFullYear()}-${new Date(date).getMonth() + 1}` });
             localStorage.setItem(KEY_M, JSON.stringify(data));
             refreshMoneyUI();
@@ -162,22 +179,13 @@
         const histEl = document.getElementById('m-history');
         let mInc = 0, mExp = 0, gTotal = 0;
         histEl.innerHTML = '';
-
         history.forEach(item => {
             gTotal += item.amount;
             if (item.monthKey === targetMonth) {
                 if (item.amount > 0) mInc += item.amount; else mExp += Math.abs(item.amount);
-                
                 const row = document.createElement('div');
                 row.className = 'history-row';
-                row.innerHTML = `
-                    <div class="history-info">
-                        <span>${item.title}</span>
-                        <span class="history-date">${item.date}</span>
-                    </div>
-                    <span style="color:${item.amount >= 0 ? 'var(--success)':'var(--danger)'}">${item.amount.toLocaleString()}円</span>
-                    <button class="del-btn" onclick="deleteMoney(${item.id})">×</button>
-                `;
+                row.innerHTML = `<div><b>${item.title}</b><br><small>${item.date}</small></div><div style="display:flex;align-items:center;"><span style="color:${item.amount >= 0 ? 'var(--success)':'var(--danger)'}">${item.amount.toLocaleString()}円</span><button class="del-btn" onclick="deleteMoney(${item.id})">×</button></div>`;
                 histEl.prepend(row);
             }
         });
@@ -186,9 +194,8 @@
         document.getElementById('sum-exp').innerText = `¥${mExp.toLocaleString()}`;
     }
 
-    // 収支データの消去関数
     function deleteMoney(id) {
-        if (!confirm("この収支データを削除してよろしいですか？")) return;
+        if (!confirm("削除しますか？")) return;
         let data = JSON.parse(localStorage.getItem(KEY_M) || '[]');
         data = data.filter(item => item.id !== id);
         localStorage.setItem(KEY_M, JSON.stringify(data));
