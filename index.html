@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizManage Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Life & Biz Manager</title>
     
     <link rel="manifest" id="my-manifest">
     <meta name="theme-color" content="#2c3e50">
@@ -13,30 +13,99 @@
     
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --gold: #f39c12; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; padding: 10px; }
-        .wrapper { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 15px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 15px; }
-        h2 { color: var(--primary); margin: 0 0 15px 0; border-left: 5px solid var(--accent); padding-left: 10px; font-size: 1.2em; }
         
-        #calendar { height: 500px; background: white; font-size: 0.9em; }
-        
-        .input-box { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        input, select, button { padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-        button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: bold; }
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            padding: 10px; 
+            color: var(--primary);
+        }
 
-        .total-assets-card { background: var(--primary); color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 10px; }
-        .total-assets-amount { font-size: 1.5em; font-weight: bold; color: var(--gold); }
+        .wrapper { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 1fr 400px; 
+            gap: 15px; 
+        }
+
+        .card { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+            margin-bottom: 15px; 
+        }
+
+        h2 { 
+            font-size: 1.1em; 
+            margin: 0 0 15px 0; 
+            border-left: 4px solid var(--accent); 
+            padding-left: 10px; 
+        }
+
+        /* カレンダーのスマホ調整 */
+        #calendar { 
+            background: white; 
+            height: auto;
+            min-height: 450px;
+        }
+
+        /* FullCalendar内の文字サイズ調整 */
+        .fc { font-size: 0.85em; }
+        .fc .fc-toolbar-title { font-size: 1.1em !important; }
+
+        .input-box { 
+            background: #f8f9fa; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        }
+
+        .flex-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        input, select, button { 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 16px; /* iPhoneでのズーム防止のため16px推奨 */
+            flex: 1;
+        }
+
+        button { background: var(--accent); color: white; border: none; font-weight: bold; }
+
+        /* 家計簿・累計エリア */
+        .total-assets-card { 
+            background: var(--primary); 
+            color: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            text-align: center; 
+        }
+        .total-assets-amount { font-size: 1.6em; font-weight: bold; color: var(--gold); }
         
         .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-        .report-item { padding: 8px; border-radius: 8px; text-align: center; font-size: 0.8em; }
+        .report-item { padding: 10px; border-radius: 8px; text-align: center; font-size: 0.8em; }
         .inc-box { background: #e8f5e9; color: var(--success); }
         .exp-box { background: #ffebee; color: var(--danger); }
         
-        .history-container { max-height: 180px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 8px; }
-        .history-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f9f9f9; font-size: 0.8em; }
+        .history-container { max-height: 150px; overflow-y: auto; font-size: 0.85em; }
+        .history-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
 
-        @media (max-width: 1000px) { .wrapper { grid-template-columns: 1fr; } }
+        .data-tools { margin-top: 8px; display: flex; justify-content: center; gap: 10px; }
+        .data-tools button { background: rgba(255,255,255,0.1); font-size: 0.7em; padding: 5px; }
+
+        /* --- スマホ向けの最重要設定 --- */
+        @media (max-width: 900px) {
+            .wrapper { grid-template-columns: 1fr; } /* 縦並びに変更 */
+            body { padding: 5px; }
+            .card { padding: 10px; }
+            #calendar { height: 500px; }
+            .total-assets-card { order: -1; } /* 累計残高を一番上に表示 */
+        }
     </style>
 </head>
 <body>
@@ -47,29 +116,33 @@
         <div id="calendar"></div>
         <div class="input-box">
             <div class="flex-row">
-                <input type="text" id="t-title" placeholder="予定名" style="flex:1;">
+                <input type="text" id="t-title" placeholder="予定名">
                 <select id="t-priority"><option value="high">高</option><option value="mid" selected>中</option><option value="low">低</option></select>
             </div>
             <div class="flex-row">
                 <input type="date" id="t-date">
                 <input type="time" id="t-time" value="09:00">
-                <button id="btn-add-task" style="flex:1;">追加</button>
+                <button id="btn-add-task">登録</button>
             </div>
         </div>
     </div>
 
     <div class="side-panel">
         <div class="total-assets-card">
-            <div>累計残高</div>
+            <div style="font-size: 0.8em; opacity: 0.8;">現在の累計残高</div>
             <div class="total-assets-amount">¥ <span id="grand-total">0</span></div>
+            <div class="data-tools">
+                <button onclick="exportData()">保存</button>
+                <button onclick="importData()">復元</button>
+            </div>
         </div>
 
         <div class="card">
             <h2>Money</h2>
             <select id="month-filter" style="width:100%; margin-bottom:10px;" onchange="refreshMoneyUI()"></select>
             <div class="report-grid">
-                <div class="report-item inc-box">収入<br><span id="sum-inc">¥0</span></div>
-                <div class="report-item exp-box">支出<br><span id="sum-exp">¥0</span></div>
+                <div class="report-item inc-box">当月収入<br><span id="sum-inc">¥0</span></div>
+                <div class="report-item exp-box">当月支出<br><span id="sum-exp">¥0</span></div>
             </div>
             <div class="input-box">
                 <input type="text" id="m-title" placeholder="内容">
@@ -83,42 +156,30 @@
 </div>
 
 <script>
-    // PWA用のマニフェストを動的に生成
-    const manifest = {
-        "name": "BizManage Pro",
-        "short_name": "BizManage",
-        "start_url": ".",
-        "display": "standalone",
-        "background_color": "#f4f7f6",
-        "theme_color": "#2c3e50",
-        "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2666/2666505.png", "sizes": "512x512", "type": "image/png" }]
-    };
-    const stringManifest = JSON.stringify(manifest);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
+    /* PWA & Logic (以前の機能を継承) */
+    const manifest = { "name": "Life & Biz", "short_name": "LifeBiz", "start_url": ".", "display": "standalone", "background_color": "#f4f7f6", "theme_color": "#2c3e50", "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2666/2666505.png", "sizes": "512x512", "type": "image/png" }] };
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
     document.getElementById('my-manifest').setAttribute('href', URL.createObjectURL(blob));
 
-    // Service Workerの登録（アプリ化に必須）
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('data:text/javascript;base64,' + btoa('self.addEventListener("fetch", (e) => {});'));
-    }
-
-    // --- 以下、既存のロジック ---
     let calendar;
-    const KEY_T = 'biz_tasks_v7';
-    const KEY_M = 'biz_money_v7';
+    const KEY_T = 'life_biz_tasks_v8';
+    const KEY_M = 'life_biz_money_v8';
 
     document.addEventListener('DOMContentLoaded', function() {
         calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
             initialView: 'dayGridMonth',
             locale: 'ja',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+            contentHeight: 'auto',
+            handleWindowResize: true,
+            headerToolbar: { left: 'prev,next', center: 'title', right: 'today,dayGridMonth,timeGridWeek' },
             events: JSON.parse(localStorage.getItem(KEY_T) || '[]'),
             eventClick: (info) => {
                 if (confirm(`削除しますか？`)) {
                     info.event.remove();
                     let data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
-                    data = data.filter(item => !(item.title === info.event.title && item.start === info.event.startStr));
+                    data = data.filter(i => !(i.title === info.event.title && i.start === info.event.startStr));
                     localStorage.setItem(KEY_T, JSON.stringify(data));
+                    refreshMoneyUI();
                 }
             }
         });
@@ -135,6 +196,7 @@
             const data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
             data.push(newEv);
             localStorage.setItem(KEY_T, JSON.stringify(data));
+            document.getElementById('t-title').value = '';
         };
 
         initMonthSelect();
@@ -151,13 +213,15 @@
             data.push({ title, amount, date, monthKey: `${dObj.getFullYear()}-${dObj.getMonth() + 1}` });
             localStorage.setItem(KEY_M, JSON.stringify(data));
             refreshMoneyUI();
+            document.getElementById('m-title').value = '';
+            document.getElementById('m-amount').value = '';
         };
     });
 
     function initMonthSelect() {
         const sel = document.getElementById('month-filter');
         const now = new Date();
-        for (let i = -12; i <= 3; i++) {
+        for (let i = -6; i <= 3; i++) {
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
             const val = `${d.getFullYear()}-${d.getMonth() + 1}`;
             const opt = new Option(`${d.getFullYear()}年 ${d.getMonth() + 1}月`, val);
@@ -170,10 +234,10 @@
         const history = JSON.parse(localStorage.getItem(KEY_M) || '[]');
         const targetMonth = document.getElementById('month-filter').value;
         const histEl = document.getElementById('m-history');
-        let mInc = 0, mExp = 0, grandTotal = 0;
+        let mInc = 0, mExp = 0, gTotal = 0;
         histEl.innerHTML = '';
         history.forEach(item => {
-            grandTotal += item.amount;
+            gTotal += item.amount;
             if (item.monthKey === targetMonth) {
                 if (item.amount > 0) mInc += item.amount; else mExp += Math.abs(item.amount);
                 const row = document.createElement('div');
@@ -182,11 +246,12 @@
                 histEl.prepend(row);
             }
         });
-        document.getElementById('grand-total').innerText = grandTotal.toLocaleString();
+        document.getElementById('grand-total').innerText = gTotal.toLocaleString();
         document.getElementById('sum-inc').innerText = `¥${mInc.toLocaleString()}`;
         document.getElementById('sum-exp').innerText = `¥${mExp.toLocaleString()}`;
     }
-</script>
 
-</body>
-</html>
+    function exportData() {
+        const data = { tasks: localStorage.getItem(KEY_T), money: localStorage.getItem(KEY_M) };
+        const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+        const a = document.createElement
