@@ -16,35 +16,29 @@
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
         h2 { font-size: 1.1em; margin: 0 0 12px 0; border-left: 4px solid var(--accent); padding-left: 10px; }
 
-        /* スケジュールエリア */
         #calendar-scroll-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #eee; border-radius: 8px; background: #fff; }
-        #calendar-container { min-height: 450px; height: 60vh; }
+        #calendar-container { min-height: 400px; height: 55vh; }
         #calendar { min-width: 100%; height: 100% !important; }
 
-        /* マネーレポート：履歴スクロールの強化 */
-        .history-container { 
-            max-height: 400px; /* ここで高さを固定 */
-            overflow-y: auto;  /* 縦スクロールを許可 */
-            border: 1px solid #f0f0f0;
-            border-radius: 8px;
-            padding: 5px 10px;
-            margin-top: 10px;
-            background: #fafafa;
-            -webkit-overflow-scrolling: touch; /* iOSの慣性スクロール */
-        }
+        /* 検索・フィルターエリア */
+        .filter-section { margin-top: 10px; background: #fdfdfd; padding: 10px; border-radius: 8px; border: 1px solid #efefef; }
+        .search-box { position: relative; margin-bottom: 8px; }
+        .search-box input { width: 100%; padding: 10px 12px 10px 35px; border-radius: 8px; border: 1px solid #ddd; font-size: 0.9em; box-sizing: border-box; }
+        .search-box::before { content: '🔍'; position: absolute; left: 12px; top: 10px; font-size: 0.9em; opacity: 0.5; }
+        
+        .price-filter { display: flex; align-items: center; gap: 5px; font-size: 0.8em; }
+        .price-filter select { padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 1em; background: #fff; flex: 2; }
 
-        /* スクロールバーのデザイン（PC/一部のスマホ用） */
-        .history-container::-webkit-scrollbar { width: 6px; }
-        .history-container::-webkit-scrollbar-track { background: #f1f1f1; }
-        .history-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        .search-result-sum { font-size: 0.85em; color: var(--accent); font-weight: bold; text-align: right; margin: 8px 0; min-height: 1.2em; }
 
+        /* 履歴スクロール */
+        .history-container { max-height: 350px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 8px; padding: 5px 10px; background: #fafafa; -webkit-overflow-scrolling: touch; }
         .history-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
         .history-row:last-child { border-bottom: none; }
 
-        /* その他UI要素 */
         .input-box { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .flex-row { display: flex; gap: 5px; flex-wrap: wrap; }
-        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; flex: 1; min-width: 45%; }
+        input, select, button { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; flex: 1; }
         button { background: var(--accent); color: white; border: none; font-weight: bold; cursor: pointer; }
         
         .total-assets-card { background: var(--primary); color: white; padding: 18px; border-radius: 12px; text-align: center; }
@@ -75,11 +69,7 @@
 
     <div class="card">
         <h2>Schedule</h2>
-        <div id="calendar-scroll-wrapper">
-            <div id="calendar-container">
-                <div id="calendar"></div>
-            </div>
-        </div>
+        <div id="calendar-scroll-wrapper"><div id="calendar-container"><div id="calendar"></div></div></div>
         <div class="input-box">
             <div class="flex-row">
                 <input type="text" id="t-title" placeholder="予定名">
@@ -102,18 +92,36 @@
         </div>
         <div class="input-box">
             <input type="text" id="m-title" placeholder="内容">
-            <input type="number" id="m-amount" placeholder="金額">
+            <input type="number" id="m-amount" placeholder="金額（支出はマイナス）">
             <input type="date" id="m-date">
             <button id="btn-add-money" style="background:var(--success);">収支記録</button>
         </div>
+
+        <div class="filter-section">
+            <div class="search-box">
+                <input type="text" id="m-search" placeholder="キーワード検索" oninput="refreshMoneyUI()">
+            </div>
+            <div class="price-filter">
+                <span>金額範囲:</span>
+                <select id="m-range" onchange="refreshMoneyUI()">
+                    <option value="all">全額</option>
+                    <option value="under1000">1,000円未満</option>
+                    <option value="1000-5000">1,000円〜5,000円未満</option>
+                    <option value="5000-10000">5,000円〜10,000円未満</option>
+                    <option value="over10000">10,000円以上</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="search-result-sum" id="search-sum"></div>
         <div class="history-container" id="m-history"></div>
     </div>
 </div>
 
 <script>
     let calendar;
-    const KEY_T = 'life_biz_v15_tasks';
-    const KEY_M = 'life_biz_v15_money';
+    const KEY_T = 'life_biz_v17_tasks';
+    const KEY_M = 'life_biz_v17_money';
 
     document.addEventListener('DOMContentLoaded', function() {
         calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
@@ -122,37 +130,22 @@
             height: '100%',
             headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
             buttonText: { month: '月', week: '週', list: '予定' },
-            datesSet: function(info) {
-                const calTable = document.getElementById('calendar');
-                if (window.innerWidth < 768 && (info.view.type === 'timeGridWeek' || info.view.type === 'timeGridDay')) {
-                    calTable.style.width = '800px';
-                } else {
-                    calTable.style.width = '100%';
-                }
+            datesSet: (info) => {
+                const cal = document.getElementById('calendar');
+                cal.style.width = (window.innerWidth < 768 && (info.view.type.includes('timeGrid'))) ? '800px' : '100%';
                 calendar.updateSize();
             },
-            events: JSON.parse(localStorage.getItem(KEY_T) || '[]'),
-            eventClick: (info) => {
-                if (confirm(`削除しますか？`)) {
-                    info.event.remove();
-                    let data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
-                    data = data.filter(i => !(i.title === info.event.title && i.start === info.event.startStr));
-                    localStorage.setItem(KEY_T, JSON.stringify(data));
-                }
-            }
+            events: JSON.parse(localStorage.getItem(KEY_T) || '[]')
         });
         calendar.render();
 
         document.getElementById('btn-add-task').onclick = () => {
             const title = document.getElementById('t-title').value;
             const date = document.getElementById('t-date').value;
-            const time = document.getElementById('t-time').value;
-            if(!title || !date) return alert("入力不足");
-            const newEv = { title, start: `${date}T${time}:00`, backgroundColor: document.getElementById('t-priority').value === 'high' ? '#e74c3c' : '#3498db', borderColor: 'transparent' };
+            if(!title || !date) return;
+            const newEv = { title, start: `${date}T${document.getElementById('t-time').value}:00`, backgroundColor: document.getElementById('t-priority').value === 'high' ? '#e74c3c' : '#3498db', borderColor: 'transparent' };
             calendar.addEvent(newEv);
-            let data = JSON.parse(localStorage.getItem(KEY_T) || '[]');
-            data.push(newEv);
-            localStorage.setItem(KEY_T, JSON.stringify(data));
+            let d = JSON.parse(localStorage.getItem(KEY_T) || '[]'); d.push(newEv); localStorage.setItem(KEY_T, JSON.stringify(d));
             document.getElementById('t-title').value = '';
         };
 
@@ -169,8 +162,7 @@
             data.push({ id: Date.now(), title, amount, date, monthKey: `${new Date(date).getFullYear()}-${new Date(date).getMonth() + 1}` });
             localStorage.setItem(KEY_M, JSON.stringify(data));
             refreshMoneyUI();
-            document.getElementById('m-title').value = '';
-            document.getElementById('m-amount').value = '';
+            document.getElementById('m-title').value = ''; document.getElementById('m-amount').value = '';
         };
     });
 
@@ -187,19 +179,39 @@
     function refreshMoneyUI() {
         const history = JSON.parse(localStorage.getItem(KEY_M) || '[]');
         const targetMonth = document.getElementById('month-filter').value;
+        const searchQuery = document.getElementById('m-search').value.toLowerCase();
+        const range = document.getElementById('m-range').value;
         const histEl = document.getElementById('m-history');
-        let mInc = 0, mExp = 0, gTotal = 0;
+        
+        let mInc = 0, mExp = 0, gTotal = 0, filteredSum = 0, count = 0;
         histEl.innerHTML = '';
+
         history.forEach(item => {
             gTotal += item.amount;
             if (item.monthKey === targetMonth) {
                 if (item.amount > 0) mInc += item.amount; else mExp += Math.abs(item.amount);
-                const row = document.createElement('div');
-                row.className = 'history-row';
-                row.innerHTML = `<div><b>${item.title}</b><br><small>${item.date}</small></div><div style="display:flex;align-items:center;"><span style="color:${item.amount >= 0 ? 'var(--success)':'var(--danger)'}">${item.amount.toLocaleString()}円</span><button class="del-btn" onclick="deleteMoney(${item.id})">×</button></div>`;
-                histEl.prepend(row);
+                
+                // 金額階級フィルターの判定
+                const absAmt = Math.abs(item.amount);
+                let inRange = true;
+                if (range === 'under1000') inRange = absAmt < 1000;
+                else if (range === '1000-5000') inRange = absAmt >= 1000 && absAmt < 5000;
+                else if (range === '5000-10000') inRange = absAmt >= 5000 && absAmt < 10000;
+                else if (range === 'over10000') inRange = absAmt >= 10000;
+
+                // 文字検索との合わせ技
+                if (inRange && (!searchQuery || item.title.toLowerCase().includes(searchQuery))) {
+                    filteredSum += item.amount;
+                    count++;
+                    const row = document.createElement('div');
+                    row.className = 'history-row';
+                    row.innerHTML = `<div><b>${item.title}</b><br><small>${item.date}</small></div><div style="display:flex;align-items:center;"><span style="color:${item.amount >= 0 ? 'var(--success)':'var(--danger)'}">${item.amount.toLocaleString()}円</span><button class="del-btn" onclick="deleteMoney(${item.id})">×</button></div>`;
+                    histEl.prepend(row);
+                }
             }
         });
+
+        document.getElementById('search-sum').innerText = (searchQuery || range !== 'all') ? `該当項目: ${count}件 / 合計: ${filteredSum.toLocaleString()}円` : '';
         document.getElementById('grand-total').innerText = gTotal.toLocaleString();
         document.getElementById('sum-inc').innerText = `¥${mInc.toLocaleString()}`;
         document.getElementById('sum-exp').innerText = `¥${mExp.toLocaleString()}`;
@@ -216,20 +228,17 @@
 
     function exportData() {
         const data = { tasks: localStorage.getItem(KEY_T), money: localStorage.getItem(KEY_M) };
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type: 'application/json'}));
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], {type: 'application/json'}));
         a.download = 'life-biz-backup.json'; a.click();
     }
 
     function importData() {
-        const input = document.createElement('input');
-        input.type = 'file';
+        const input = document.createElement('input'); input.type = 'file';
         input.onchange = e => {
             const reader = new FileReader();
             reader.onload = event => {
                 const data = JSON.parse(event.target.result);
-                localStorage.setItem(KEY_T, data.tasks || '[]');
-                localStorage.setItem(KEY_M, data.money || '[]');
+                localStorage.setItem(KEY_T, data.tasks || '[]'); localStorage.setItem(KEY_M, data.money || '[]');
                 location.reload();
             };
             reader.readAsText(e.target.files[0]);
